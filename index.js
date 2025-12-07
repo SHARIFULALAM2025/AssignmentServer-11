@@ -7,7 +7,7 @@ const cors = require("cors");
 /* middleware */
 app.use(
     cors({
-         origin: [process.env.Client_Domain],
+        origin: [process.env.Client_Domain],
         credentials: true,
         optionSuccessStatus: 200,
     })
@@ -44,23 +44,23 @@ async function run() {
         const database = client.db("assignment_11");
         const userCollection = database.collection("users");
         const libraryBookCollection = database.collection("library");
-        const placeOrderInformation=database.collection("order")
+        const placeOrderInformation = database.collection("order")
 
 
         /* write your all api here.... */
         //save userCollection database
-        app.post("/users", async(req, res) => {
+        app.post("/users", async (req, res) => {
             const userData = req.body;
-            userData.create_at=new Date().toISOString()
+            userData.create_at = new Date().toISOString()
             userData.lastLogin_at = new Date().toISOString()
-            userData.role ="user"
+            userData.role = "user"
             const query = { email: userData.email }
             const existUser = await userCollection.findOne(query)
             console.log("user already exist -->", !!existUser);
             if (existUser) {
                 console.log("update user -->");
                 const result = await userCollection.updateOne(query, {
-                    $set: { lastLogin_at : new Date().toISOString() }
+                    $set: { lastLogin_at: new Date().toISOString() }
                 })
                 return res.send(result)
             }
@@ -72,10 +72,10 @@ async function run() {
         app.get("/users/role/:email", async (req, res) => {
             const email = req.params.email;
             const result = await userCollection.findOne({ email })
-            res.send({role:result?.role})
+            res.send({ role: result?.role })
         })
         // all book library
-        app.post("/library", async(req, res) => {
+        app.post("/library", async (req, res) => {
             const data = req.body;
             const result = await libraryBookCollection.insertOne(data)
             res.send(result)
@@ -86,12 +86,12 @@ async function run() {
             const result = await libraryBookCollection.find().toArray()
             res.send(result)
         })
-        app.put('/updateBook/:id', async(req, res) => {
+        app.put('/updateBook/:id', async (req, res) => {
             const id = req.params.id;
             const updateData = req.body;
             const query = { _id: new ObjectId(id) }
             const update = {
-                $set:  updateData
+                $set: updateData
             }
             const result = await libraryBookCollection.updateOne(query, update)
             res.send(result)
@@ -101,29 +101,29 @@ async function run() {
             const result = await libraryBookCollection.find().toArray();
             res.send(result)
         })
-        app.get('/book/:id', async(req, res) => {
+        app.get('/book/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await libraryBookCollection.findOne(query)
             res.send(result)
         })
         // place order info
-        app.post("/placeOrder", async(req, res) => {
+        app.post("/placeOrder", async (req, res) => {
             const orderData = req.body;
             const result = await placeOrderInformation.insertOne(orderData)
             res.send(result)
         })
         /* all user get */
-        app.get("/allUser", async(req, res) => {
+        app.get("/allUser", async (req, res) => {
             const result = await userCollection.find().toArray()
             res.send(result)
         })
         /* admin api  */
-        app.patch("/make-librarian/:id",async (req, res) => {
+        app.patch("/make-librarian/:id", async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const update = {
-                $set: { role:"Librarian"}
+                $set: { role: "Librarian" }
             }
             const result = await userCollection.updateOne(query, update)
             res.send(result)
@@ -138,11 +138,11 @@ async function run() {
             res.send(result)
         })
         /* manage book api-----------> */
-        app.get("/manage-book", async(req, res) => {
+        app.get("/manage-book", async (req, res) => {
             const result = await libraryBookCollection.find().toArray()
             res.send(result)
         })
-        app.patch("/category-manage/:id", async(req, res) => {
+        app.patch("/category-manage/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const book = await libraryBookCollection.findOne(query)
@@ -153,12 +153,30 @@ async function run() {
             const result = await libraryBookCollection.updateOne(query, update)
             res.send(result)
         })
-        app.delete("/order-book/:id", async(req, res) => {
+        app.delete("/order-book/:id", async (req, res) => {
             const id = req.params.id;
-            const query={_id:new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const deleteBook = await libraryBookCollection.deleteOne(query)
-            const deleteOrder = await placeOrderInformation.deleteMany({ bookId:id })
+            const deleteOrder = await placeOrderInformation.deleteMany({ bookId: id })
             res.send(deleteBook, deleteOrder)
+
+        })
+        /* my order  */
+        app.get("/book-order-info/:email", async (req, res) => {
+            const email = req.params.email
+            const result = await placeOrderInformation.find({ email: email }).toArray()
+            res.send(result)
+        })
+        app.patch("/cancel-order-pending/:id", async(req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const update = {
+                $set: {
+                    status:"cancelled"
+                }
+            }
+            const order = await placeOrderInformation.updateOne(query, update)
+            res.send(order)
 
         })
         await client.db("admin").command({ ping: 1 });
