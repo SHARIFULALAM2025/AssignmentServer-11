@@ -1,0 +1,122 @@
+const express = require("express");
+require('dotenv').config()
+const app = express();
+const port = process.env.PORT || 5000;
+const cors = require("cors");
+// app.use(cors());
+/* middleware */
+app.use(
+    cors({
+         origin: [process.env.Client_Domain],
+        credentials: true,
+        optionSuccessStatus: 200,
+    })
+)
+app.use(express.json());
+app.get("/", (req, res) => {
+    res.send("Hi Developer Assignment-11 Server is Running !");
+})
+app.listen(port, () => {
+    console.log(`THE SERVER LISTING PORT ON ${port}`);
+})
+
+/* firebase admin sdk  start here */
+var admin = require("firebase-admin");
+var serviceAccount = require("./FirebaseSdk.json");
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+/* end sdk */
+/* mongodb start here */
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.BD_PASS}@cluster0.sxgnyhx.mongodb.net/?appName=Cluster0`;
+const client = new MongoClient(uri, {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    }
+});
+
+async function run() {
+    try {
+        /* create database and collection */
+        const database = client.db("assignment_11");
+        const userCollection = database.collection("users");
+        const libraryBookCollection = database.collection("library");
+        const placeOrderInformation=database.collection("order")
+
+
+        /* write your all api here.... */
+        //save userCollection database
+        app.post("/users", async(req, res) => {
+            const userData = req.body;
+            userData.create_at=new Date().toISOString()
+            userData.lastLogin_at = new Date().toISOString()
+            userData.role ="user"
+            const query = { email: userData.email }
+            const existUser = await userCollection.findOne(query)
+            console.log("user already exist -->", !!existUser);
+            if (existUser) {
+                console.log("update user -->");
+                const result = await userCollection.updateOne(query, {
+                    $set: { lastLogin_at : new Date().toISOString() }
+                })
+                return res.send(result)
+            }
+            const result = await userCollection.insertOne(userData)
+            console.log(userData);
+            res.send(result)
+        })
+        // user role api
+        app.get("/users/role/:email", async (req, res) => {
+            const email = req.params.email;
+            const result = await userCollection.findOne({ email })
+            res.send({role:result?.role})
+        })
+        // all book library
+        app.post("/library", async(req, res) => {
+            const data = req.body;
+            const result = await libraryBookCollection.insertOne(data)
+            res.send(result)
+
+
+        })
+        app.get("/allLibraryBook", async (req, res) => {
+            const result = await libraryBookCollection.find().toArray()
+            res.send(result)
+        })
+        app.put('/updateBook/:id', async(req, res) => {
+            const id = req.params.id;
+            const updateData = req.body;
+            const query = { _id: new ObjectId(id) }
+            const update = {
+                $set:  updateData
+            }
+            const result = await libraryBookCollection.updateOne(query, update)
+            res.send(result)
+        })
+        // all book api ------------->
+        app.get("/allBookLibrary", async (req, res) => {
+            const result = await libraryBookCollection.find().toArray();
+            res.send(result)
+        })
+        app.get('/book/:id', async(req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await libraryBookCollection.findOne(query)
+            res.send(result)
+        })
+        // place order info
+        app.post("/placeOrder", async(req, res) => {
+            const orderData = req.body;
+            const result = await placeOrderInformation.insertOne(orderData)
+            res.send(result)
+        })
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    } finally {
+
+    }
+}
+run().catch(console.dir);
