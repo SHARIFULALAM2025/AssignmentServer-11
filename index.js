@@ -113,6 +113,54 @@ async function run() {
             const result = await placeOrderInformation.insertOne(orderData)
             res.send(result)
         })
+        /* all user get */
+        app.get("/allUser", async(req, res) => {
+            const result = await userCollection.find().toArray()
+            res.send(result)
+        })
+        /* admin api  */
+        app.patch("/make-librarian/:id",async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const update = {
+                $set: { role:"Librarian"}
+            }
+            const result = await userCollection.updateOne(query, update)
+            res.send(result)
+        })
+        app.patch("/make-Admin/:id", async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const update = {
+                $set: { role: "Admin" }
+            }
+            const result = await userCollection.updateOne(query, update)
+            res.send(result)
+        })
+        /* manage book api-----------> */
+        app.get("/manage-book", async(req, res) => {
+            const result = await libraryBookCollection.find().toArray()
+            res.send(result)
+        })
+        app.patch("/category-manage/:id", async(req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const book = await libraryBookCollection.findOne(query)
+            const updateCategory = book.Category === "published" ? "unpublished" : "published"
+            const update = {
+                $set: { Category: updateCategory }
+            }
+            const result = await libraryBookCollection.updateOne(query, update)
+            res.send(result)
+        })
+        app.delete("/order-book/:id", async(req, res) => {
+            const id = req.params.id;
+            const query={_id:new ObjectId(id)}
+            const deleteBook = await libraryBookCollection.deleteOne(query)
+            const deleteOrder = await placeOrderInformation.deleteMany({ bookId:id })
+            res.send(deleteBook, deleteOrder)
+
+        })
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
