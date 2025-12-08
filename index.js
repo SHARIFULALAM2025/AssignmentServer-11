@@ -1,5 +1,6 @@
 const express = require("express");
 require('dotenv').config()
+const stripe = require("stripe")(process.env.stripe_secrete_key)
 const app = express();
 const port = process.env.PORT || 5000;
 const cors = require("cors");
@@ -48,6 +49,70 @@ async function run() {
 
 
         /* write your all api here.... */
+        app.post("/create-checkout-session", async (req, res) => {
+            const paymentInfo = req.body;
+
+            console.log(paymentInfo);
+
+            const session = await stripe.checkout.sessions.create({
+                line_items: [
+                    {
+                        price_data: {
+                            currency: "USD",
+                            unit_amount: paymentInfo?.Price * 100,
+                            product_data: {
+                                name: paymentInfo?.BookName,
+                                images: [paymentInfo?.image],
+
+                            },
+                        },
+
+                        quantity: paymentInfo?.quantity,
+                    },
+                ],
+                mode: 'payment',
+                customer_email: paymentInfo.email,
+                metadata: {
+                    bookId: paymentInfo?._id,
+                    name: paymentInfo?.name,
+                    email: paymentInfo?.email
+
+                },
+
+                success_url: `${process.env.Client_Domain}/payment?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.Client_Domain}/dashboard/MyOrder`,
+
+
+            })
+            res.send({ url: session.url })
+
+        })
+        app.post("/payment-status", async (req, res) => {
+            const { sessionId } = req.body
+            const session = await stripe.checkout.sessions.retrieve(sessionId)
+            if (session.status === "complete") {
+                const paymentInfo = {
+                    bookId: session.metadata.bookId,
+                    transactionId: session.payment_intent,
+                    Price: session.amount_total / 100,
+
+
+
+                }
+                await placeOrderInformation.updateOne({ _id: new ObjectId(paymentInfo.bookId) }, {
+                    $set: {
+                        paymentStatus: session.payment_status,
+                        transactionId: paymentInfo.transactionId,
+                        createDate:new Date().toISOString()
+
+                    }
+                })
+
+            }
+            console.log(session);
+
+
+        })
         //save userCollection database
         app.post("/users", async (req, res) => {
             const userData = req.body;
@@ -162,23 +227,51 @@ async function run() {
 
         })
         /* my order  */
+        app.get("/librarianOrderControl", async(req, res) => {
+            const result = await placeOrderInformation.find().toArray()
+            res.send(result)
+
+        })
+        app.patch("/orders/status/:id", async(req, res) => {
+            const id = req.params.id;
+            const {status} = req.body;
+            const query = { _id: new ObjectId(id) }
+            const update = {
+                $set: { status: status }
+            }
+            const result = await placeOrderInformation.updateOne(query, update)
+            res.send(result)
+        })
+        app.delete("/delete/order/:id", async(req, res) => {
+            const id = req.params.id
+            const query={_id:new ObjectId(id)}
+            const result = await placeOrderInformation.deleteOne(query)
+            res.send(result)
+        })
         app.get("/book-order-info/:email", async (req, res) => {
             const email = req.params.email
             const result = await placeOrderInformation.find({ email: email }).toArray()
             res.send(result)
         })
-        app.patch("/cancel-order-pending/:id", async(req, res) => {
+        app.patch("/cancel-order-pending/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const update = {
                 $set: {
-                    status:"cancelled"
+                    status: "cancelled"
                 }
             }
             const order = await placeOrderInformation.updateOne(query, update)
             res.send(order)
 
         })
+        /* invoice page */
+        app.get("/invoice/:email", async (req, res) => {
+            const email=req.params.email
+            const result = await placeOrderInformation.find({email:email}).toArray()
+            res.send(result)
+        })
+
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
