@@ -48,6 +48,8 @@ async function run() {
         const placeOrderInformation = database.collection("order")
         const allWishlist = database.collection("wishlist")
         const alReview = database.collection("review")
+        const carouselData = database.collection("carousel")
+        const bookQuestion = database.collection("question")
 
 
         /* write your all api here.... */
@@ -295,6 +297,30 @@ async function run() {
             const bookId = req.params.bookId
 
             const result = await alReview.find({ bookId }).toArray()
+            res.send(result)
+        })
+        //sliders
+        app.post("/carousel", async(req, res) => {
+            const data = req.body
+            const result = await carouselData.insertOne(data)
+            res.send(result)
+        })
+        app.get("/myCarousel", async(req, res) => {
+            const result = await carouselData.find().toArray()
+            res.send(result)
+        })
+        app.get("/latest-book", async(req, res) => {
+            const result = await libraryBookCollection.find().sort({ createAt:-1 }).limit(6).toArray()
+            res.send(result)
+        })
+        //faq
+        app.post("/question", async (req, res) => {
+            const data = req.body
+            const result = await bookQuestion.insertOne(data)
+            res.send(result)
+        })
+        app.get("/customer-question", async (req, res) => {
+            const result = await bookQuestion.find().toArray()
             res.send(result)
         })
 
