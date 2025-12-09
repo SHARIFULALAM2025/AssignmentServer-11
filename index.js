@@ -46,6 +46,8 @@ async function run() {
         const userCollection = database.collection("users");
         const libraryBookCollection = database.collection("library");
         const placeOrderInformation = database.collection("order")
+        const allWishlist = database.collection("wishlist")
+        const alReview = database.collection("review")
 
 
         /* write your all api here.... */
@@ -103,7 +105,7 @@ async function run() {
                     $set: {
                         paymentStatus: session.payment_status,
                         transactionId: paymentInfo.transactionId,
-                        createDate:new Date().toISOString()
+                        createDate: new Date().toISOString()
 
                     }
                 })
@@ -227,14 +229,14 @@ async function run() {
 
         })
         /* my order  */
-        app.get("/librarianOrderControl", async(req, res) => {
+        app.get("/librarianOrderControl", async (req, res) => {
             const result = await placeOrderInformation.find().toArray()
             res.send(result)
 
         })
-        app.patch("/orders/status/:id", async(req, res) => {
+        app.patch("/orders/status/:id", async (req, res) => {
             const id = req.params.id;
-            const {status} = req.body;
+            const { status } = req.body;
             const query = { _id: new ObjectId(id) }
             const update = {
                 $set: { status: status }
@@ -242,9 +244,9 @@ async function run() {
             const result = await placeOrderInformation.updateOne(query, update)
             res.send(result)
         })
-        app.delete("/delete/order/:id", async(req, res) => {
+        app.delete("/delete/order/:id", async (req, res) => {
             const id = req.params.id
-            const query={_id:new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const result = await placeOrderInformation.deleteOne(query)
             res.send(result)
         })
@@ -267,8 +269,32 @@ async function run() {
         })
         /* invoice page */
         app.get("/invoice/:email", async (req, res) => {
-            const email=req.params.email
-            const result = await placeOrderInformation.find({email:email}).toArray()
+            const email = req.params.email
+            const result = await placeOrderInformation.find({ email: email }).toArray()
+            res.send(result)
+        })
+        /* wishlist */
+        app.post("/wishlist", async (req, res) => {
+            const wishlistData = req.body;
+            const result = await allWishlist.insertOne(wishlistData)
+            res.send(result)
+        })
+        app.get("/unique/book/:email", async (req, res) => {
+            const email = req.params.email;
+            const result = await allWishlist.find({ email: email }).toArray()
+            res.send(result)
+
+        })
+        // review
+        app.post("/review", async (req, res) => {
+            const newData = req.body;
+            const result = await alReview.insertOne(newData)
+            res.send(result)
+        })
+        app.get("/review/:bookId", async(req, res) => {
+            const bookId = req.params.bookId
+
+            const result = await alReview.find({ bookId }).toArray()
             res.send(result)
         })
 
