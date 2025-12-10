@@ -185,7 +185,7 @@ async function run() {
             const result = await userCollection.findOne({ email })
             res.send(result)
         })
-        app.put("/users/role/:email", verifyToken, verifyAdmin, async (req, res) => {
+        app.put("/users/role/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             const filter = { email: email }
             const updateData = req.body;
@@ -197,7 +197,7 @@ async function run() {
 
         })
         // all book library
-        app.post("/library", verifyToken, verifyAdmin, async (req, res) => {
+        app.post("/library", verifyToken, async (req, res) => {
             const data = req.body;
             const result = await libraryBookCollection.insertOne(data)
             res.send(result)
@@ -208,7 +208,7 @@ async function run() {
             const result = await libraryBookCollection.find().toArray()
             res.send(result)
         })
-        app.put('/updateBook/:id', verifyToken, verifyAdmin, async (req, res) => {
+        app.put('/updateBook/:id', verifyToken, async (req, res) => {
             const id = req.params.id;
             const updateData = req.body;
             const query = { _id: new ObjectId(id) }
@@ -287,12 +287,12 @@ async function run() {
 
         })
         /* my order  */
-        app.get("/librarianOrderControl", verifyToken, verifyAdmin, async (req, res) => {
+        app.get("/librarianOrderControl", verifyToken, async (req, res) => {
             const result = await placeOrderInformation.find().toArray()
             res.send(result)
 
         })
-        app.patch("/orders/status/:id", verifyToken, verifyAdmin, async (req, res) => {
+        app.patch("/orders/status/:id", verifyToken, async (req, res) => {
             const id = req.params.id;
             const { status } = req.body;
             const query = { _id: new ObjectId(id) }
@@ -302,7 +302,7 @@ async function run() {
             const result = await placeOrderInformation.updateOne(query, update)
             res.send(result)
         })
-        app.delete("/delete/order/:id", verifyToken, verifyAdmin, async (req, res) => {
+        app.delete("/delete/order/:id", verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await placeOrderInformation.deleteOne(query)
@@ -362,7 +362,7 @@ async function run() {
             res.send(result)
         })
         //sliders
-        app.post("/carousel", verifyToken, verifyAdmin, async (req, res) => {
+        app.post("/carousel", verifyToken, async (req, res) => {
             const data = req.body
             const result = await carouselData.insertOne(data)
             res.send(result)
@@ -376,7 +376,7 @@ async function run() {
             res.send(result)
         })
         //faq
-        app.post("/question", verifyToken, verifyAdmin, async (req, res) => {
+        app.post("/question", verifyToken, async (req, res) => {
             const data = req.body
             const result = await bookQuestion.insertOne(data)
             res.send(result)
