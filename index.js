@@ -13,6 +13,29 @@ app.use(
         optionSuccessStatus: 200,
     })
 )
+
+/* very middleware */
+const verifyToken = async (req, res, next) => {
+
+    const token = req.headers.authorization
+
+    if (!token) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+    try {
+        const idToken = token.split(' ')[1]
+        const decode = await admin.auth().verifyIdToken(idToken)
+        console.log('decoded token', decode);
+        req.decoded_email = decode.email
+        next()
+
+    } catch (error) {
+        res.status(401).send({ message: "unauthorized access" })
+    }
+
+
+}
+/*  */
 app.use(express.json());
 app.get("/", (req, res) => {
     res.send("Hi Developer Assignment-11 Server is Running !");
@@ -51,6 +74,19 @@ async function run() {
         const carouselData = database.collection("carousel")
         const bookQuestion = database.collection("question")
         const customerFeedBack = database.collection("feedback")
+
+
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded_email
+            const query = { email }
+            const user = await userCollection.findOne(query)
+            if (!user || user.role !== 'Admin') {
+                return res.status(403).send({ message: 'forbidden' })
+            }
+            next()
+
+        }
+
 
 
         /* write your all api here.... */
@@ -144,14 +180,14 @@ async function run() {
             const result = await userCollection.findOne({ email })
             res.send({ role: result?.role })
         })
-        app.get("/profileUser/role/:email", async (req, res) => {
+        app.get("/profileUser/role/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             const result = await userCollection.findOne({ email })
             res.send(result)
         })
-        app.put("/users/role/:email", async(req, res) => {
+        app.put("/users/role/:email", verifyToken, verifyAdmin, async (req, res) => {
             const email = req.params.email;
-            const filter={email:email}
+            const filter = { email: email }
             const updateData = req.body;
             const update = {
                 $set: updateData
@@ -161,7 +197,7 @@ async function run() {
 
         })
         // all book library
-        app.post("/library", async (req, res) => {
+        app.post("/library", verifyToken, verifyAdmin, async (req, res) => {
             const data = req.body;
             const result = await libraryBookCollection.insertOne(data)
             res.send(result)
@@ -172,7 +208,7 @@ async function run() {
             const result = await libraryBookCollection.find().toArray()
             res.send(result)
         })
-        app.put('/updateBook/:id', async (req, res) => {
+        app.put('/updateBook/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const updateData = req.body;
             const query = { _id: new ObjectId(id) }
@@ -194,18 +230,21 @@ async function run() {
             res.send(result)
         })
         // place order info
-        app.post("/placeOrder", async (req, res) => {
+        app.post("/placeOrder", verifyToken, async (req, res) => {
             const orderData = req.body;
+            if (req.decoded_email !== orderData.email) {
+                return res.status(403).send({ message: "forbidden access" })
+            }
             const result = await placeOrderInformation.insertOne(orderData)
             res.send(result)
         })
         /* all user get */
-        app.get("/allUser", async (req, res) => {
+        app.get("/allUser", verifyToken, verifyAdmin, async (req, res) => {
             const result = await userCollection.find().toArray()
             res.send(result)
         })
         /* admin api  */
-        app.patch("/make-librarian/:id", async (req, res) => {
+        app.patch("/make-librarian/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const update = {
@@ -214,7 +253,7 @@ async function run() {
             const result = await userCollection.updateOne(query, update)
             res.send(result)
         })
-        app.patch("/make-Admin/:id", async (req, res) => {
+        app.patch("/make-Admin/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const update = {
@@ -224,11 +263,11 @@ async function run() {
             res.send(result)
         })
         /* manage book api-----------> */
-        app.get("/manage-book", async (req, res) => {
+        app.get("/manage-book", verifyToken, verifyAdmin, async (req, res) => {
             const result = await libraryBookCollection.find().toArray()
             res.send(result)
         })
-        app.patch("/category-manage/:id", async (req, res) => {
+        app.patch("/category-manage/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const book = await libraryBookCollection.findOne(query)
@@ -239,7 +278,7 @@ async function run() {
             const result = await libraryBookCollection.updateOne(query, update)
             res.send(result)
         })
-        app.delete("/order-book/:id", async (req, res) => {
+        app.delete("/order-book/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const deleteBook = await libraryBookCollection.deleteOne(query)
@@ -248,12 +287,12 @@ async function run() {
 
         })
         /* my order  */
-        app.get("/librarianOrderControl", async (req, res) => {
+        app.get("/librarianOrderControl", verifyToken, verifyAdmin, async (req, res) => {
             const result = await placeOrderInformation.find().toArray()
             res.send(result)
 
         })
-        app.patch("/orders/status/:id", async (req, res) => {
+        app.patch("/orders/status/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const { status } = req.body;
             const query = { _id: new ObjectId(id) }
@@ -263,18 +302,18 @@ async function run() {
             const result = await placeOrderInformation.updateOne(query, update)
             res.send(result)
         })
-        app.delete("/delete/order/:id", async (req, res) => {
+        app.delete("/delete/order/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await placeOrderInformation.deleteOne(query)
             res.send(result)
         })
-        app.get("/book-order-info/:email", async (req, res) => {
+        app.get("/book-order-info/:email", verifyToken, async (req, res) => {
             const email = req.params.email
             const result = await placeOrderInformation.find({ email: email }).toArray()
             res.send(result)
         })
-        app.patch("/cancel-order-pending/:id", async (req, res) => {
+        app.patch("/cancel-order-pending/:id", verifyToken, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const update = {
@@ -287,51 +326,57 @@ async function run() {
 
         })
         /* invoice page */
-        app.get("/invoice/:email", async (req, res) => {
+        app.get("/invoice/:email", verifyToken, async (req, res) => {
             const email = req.params.email
             const result = await placeOrderInformation.find({ email: email }).toArray()
             res.send(result)
         })
         /* wishlist */
-        app.post("/wishlist", async (req, res) => {
+        app.post("/wishlist", verifyToken, async (req, res) => {
             const wishlistData = req.body;
+            if (req.decoded_email !== wishlistData.email) {
+                return res.status(403).send({ message: "forbidden access" })
+            }
             const result = await allWishlist.insertOne(wishlistData)
             res.send(result)
         })
-        app.get("/unique/book/:email", async (req, res) => {
+        app.get("/unique/book/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             const result = await allWishlist.find({ email: email }).toArray()
             res.send(result)
 
         })
         // review
-        app.post("/review", async (req, res) => {
+        app.post("/review", verifyToken, async (req, res) => {
             const newData = req.body;
+            if (req.decoded_email !== newData.email) {
+                return res.status(403).send({message:"forbidden access"})
+            }
             const result = await alReview.insertOne(newData)
             res.send(result)
         })
-        app.get("/review/:bookId", async(req, res) => {
+        app.get("/review/:bookId", async (req, res) => {
             const bookId = req.params.bookId
 
             const result = await alReview.find({ bookId }).toArray()
             res.send(result)
         })
         //sliders
-        app.post("/carousel", async(req, res) => {
+        app.post("/carousel", verifyToken, verifyAdmin, async (req, res) => {
             const data = req.body
             const result = await carouselData.insertOne(data)
             res.send(result)
         })
-        app.get("/myCarousel", async(req, res) => {
+        app.get("/myCarousel", async (req, res) => {
             const result = await carouselData.find().toArray()
             res.send(result)
         })
-        app.get("/latest-book", async(req, res) => {
-            const result = await libraryBookCollection.find().sort({ createAt:-1 }).limit(6).toArray()
+        app.get("/latest-book", async (req, res) => {
+            const result = await libraryBookCollection.find().sort({ createAt: -1 }).limit(6).toArray()
             res.send(result)
         })
         //faq
-        app.post("/question", async (req, res) => {
+        app.post("/question", verifyToken, verifyAdmin, async (req, res) => {
             const data = req.body
             const result = await bookQuestion.insertOne(data)
             res.send(result)
@@ -341,12 +386,12 @@ async function run() {
             res.send(result)
         })
         //feedback
-        app.post("/feedback", async(req, res) => {
+        app.post("/feedback", verifyToken, async (req, res) => {
             const feed = req.body;
             const result = await customerFeedBack.insertOne(feed)
             res.send(result)
         })
-        app.get("/our-feedback", async(req, res) => {
+        app.get("/our-feedback", async (req, res) => {
             const result = await customerFeedBack.find().toArray()
             res.send(result)
         })
