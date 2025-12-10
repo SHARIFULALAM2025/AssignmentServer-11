@@ -50,6 +50,7 @@ async function run() {
         const alReview = database.collection("review")
         const carouselData = database.collection("carousel")
         const bookQuestion = database.collection("question")
+        const customerFeedBack = database.collection("feedback")
 
 
         /* write your all api here.... */
@@ -142,6 +143,22 @@ async function run() {
             const email = req.params.email;
             const result = await userCollection.findOne({ email })
             res.send({ role: result?.role })
+        })
+        app.get("/profileUser/role/:email", async (req, res) => {
+            const email = req.params.email;
+            const result = await userCollection.findOne({ email })
+            res.send(result)
+        })
+        app.put("/users/role/:email", async(req, res) => {
+            const email = req.params.email;
+            const filter={email:email}
+            const updateData = req.body;
+            const update = {
+                $set: updateData
+            }
+            const result = await userCollection.updateOne(filter, update)
+            res.send(result)
+
         })
         // all book library
         app.post("/library", async (req, res) => {
@@ -321,6 +338,16 @@ async function run() {
         })
         app.get("/customer-question", async (req, res) => {
             const result = await bookQuestion.find().toArray()
+            res.send(result)
+        })
+        //feedback
+        app.post("/feedback", async(req, res) => {
+            const feed = req.body;
+            const result = await customerFeedBack.insertOne(feed)
+            res.send(result)
+        })
+        app.get("/our-feedback", async(req, res) => {
+            const result = await customerFeedBack.find().toArray()
             res.send(result)
         })
 
