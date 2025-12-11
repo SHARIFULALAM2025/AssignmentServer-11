@@ -44,9 +44,16 @@ app.listen(port, () => {
     console.log(`THE SERVER LISTING PORT ON ${port}`);
 })
 
+
+
 /* firebase admin sdk  start here */
-var admin = require("firebase-admin");
-var serviceAccount = require("./FirebaseSdk.json");
+ const admin = require("firebase-admin");
+// var serviceAccount = require("./FirebaseSdk.json");
+// const serviceAccount = require("./firebase-admin-key.json");
+
+const decoded = Buffer.from(process.env.FB_Service_Key, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+//
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
@@ -76,6 +83,7 @@ async function run() {
         const customerFeedBack = database.collection("feedback")
 
 
+
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded_email
             const query = { email }
@@ -86,7 +94,16 @@ async function run() {
             next()
 
         }
+        const verifyLibrarian = async (req, res, next) => {
+            const email = req.decoded_email
+            const query = { email }
+            const user = await userCollection.findOne(query)
+            if (!user || user.role !== 'Librarian') {
+                return res.status(403).send({ message: 'forbidden' })
+            }
+            next()
 
+        }
 
 
         /* write your all api here.... */
@@ -196,8 +213,8 @@ async function run() {
             res.send(result)
 
         })
-        // all book library
-        app.post("/library", verifyToken, async (req, res) => {
+        // all book library ----------->
+        app.post("/library", verifyToken,verifyLibrarian, async (req, res) => {
             const data = req.body;
             const result = await libraryBookCollection.insertOne(data)
             res.send(result)
@@ -208,7 +225,7 @@ async function run() {
             const result = await libraryBookCollection.find().toArray()
             res.send(result)
         })
-        app.put('/updateBook/:id', verifyToken, async (req, res) => {
+        app.put('/updateBook/:id', verifyToken, verifyLibrarian, async (req, res) => {
             const id = req.params.id;
             const updateData = req.body;
             const query = { _id: new ObjectId(id) }
@@ -230,6 +247,7 @@ async function run() {
             res.send(result)
         })
         // place order info
+
         app.post("/placeOrder", verifyToken, async (req, res) => {
             const orderData = req.body;
             if (req.decoded_email !== orderData.email) {
@@ -286,13 +304,13 @@ async function run() {
             res.send(deleteBook, deleteOrder)
 
         })
-        /* my order  */
-        app.get("/librarianOrderControl", verifyToken, async (req, res) => {
+        /* my order  ------------Api*/
+        app.get("/librarianOrderControl", verifyToken, verifyLibrarian, async (req, res) => {
             const result = await placeOrderInformation.find().toArray()
             res.send(result)
 
         })
-        app.patch("/orders/status/:id", verifyToken, async (req, res) => {
+        app.patch("/orders/status/:id", verifyToken, verifyLibrarian, async (req, res) => {
             const id = req.params.id;
             const { status } = req.body;
             const query = { _id: new ObjectId(id) }
@@ -302,7 +320,7 @@ async function run() {
             const result = await placeOrderInformation.updateOne(query, update)
             res.send(result)
         })
-        app.delete("/delete/order/:id", verifyToken, async (req, res) => {
+        app.delete("/delete/order/:id", verifyToken, verifyLibrarian, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await placeOrderInformation.deleteOne(query)
@@ -325,13 +343,13 @@ async function run() {
             res.send(order)
 
         })
-        /* invoice page */
+        /* invoice page  -----------Api*/
         app.get("/invoice/:email", verifyToken, async (req, res) => {
             const email = req.params.email
             const result = await placeOrderInformation.find({ email: email }).toArray()
             res.send(result)
         })
-        /* wishlist */
+        /* wishlist  --------------Api */
         app.post("/wishlist", verifyToken, async (req, res) => {
             const wishlistData = req.body;
             if (req.decoded_email !== wishlistData.email) {
@@ -346,7 +364,7 @@ async function run() {
             res.send(result)
 
         })
-        // review
+        // review --------Api
         app.post("/review", verifyToken, async (req, res) => {
             const newData = req.body;
             if (req.decoded_email !== newData.email) {
@@ -375,7 +393,7 @@ async function run() {
             const result = await libraryBookCollection.find().sort({ createAt: -1 }).limit(6).toArray()
             res.send(result)
         })
-        //faq
+        //faq ----------------Api
         app.post("/question", verifyToken, async (req, res) => {
             const data = req.body
             const result = await bookQuestion.insertOne(data)
@@ -385,7 +403,7 @@ async function run() {
             const result = await bookQuestion.find().toArray()
             res.send(result)
         })
-        //feedback
+        //feedback ---------- Api
         app.post("/feedback", verifyToken, async (req, res) => {
             const feed = req.body;
             const result = await customerFeedBack.insertOne(feed)
@@ -396,8 +414,8 @@ async function run() {
             res.send(result)
         })
 
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
 
     }
