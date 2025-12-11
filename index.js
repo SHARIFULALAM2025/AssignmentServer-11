@@ -94,6 +94,7 @@ async function run() {
             next()
 
         }
+        // Librarian api set up----------->
         const verifyLibrarian = async (req, res, next) => {
             const email = req.decoded_email
             const query = { email }
