@@ -92,8 +92,8 @@ async function run() {
                 return res.status(403).send({ message: 'forbidden' })
             }
             next()
-
         }
+        
         // Librarian api set up----------->
         const verifyLibrarian = async (req, res, next) => {
             const email = req.decoded_email
