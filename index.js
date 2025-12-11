@@ -83,7 +83,7 @@ async function run() {
         const customerFeedBack = database.collection("feedback")
 
 
-
+//admin api correction---------->
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded_email
             const query = { email }
