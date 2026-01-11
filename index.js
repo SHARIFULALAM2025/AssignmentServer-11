@@ -93,7 +93,7 @@ async function run() {
             }
             next()
         }
-        
+
         // Librarian api set up----------->
         const verifyLibrarian = async (req, res, next) => {
             const email = req.decoded_email
@@ -391,7 +391,7 @@ async function run() {
             res.send(result)
         })
         app.get("/latest-book", async (req, res) => {
-            const result = await libraryBookCollection.find().sort({ createAt: -1 }).limit(6).toArray()
+            const result = await libraryBookCollection.find().sort({ createAt: -1 }).limit(4).toArray()
             res.send(result)
         })
         //faq ----------------Api
